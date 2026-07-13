@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/calorie-tracker/',
   plugins: [
     react(),
     VitePWA({
@@ -13,18 +14,18 @@ export default defineConfig({
         name: 'Calorie Tracker',
         short_name: 'CalorieTracker',
         description: 'Application de suivi des calories quotidiennes avec scan de codes-barres',
-        start_url: '/',
+        start_url: '/calorie-tracker/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#2563eb',
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: '/calorie-tracker/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/calorie-tracker/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
