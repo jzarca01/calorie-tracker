@@ -18,7 +18,7 @@ export const App = () => {
 
   if (!userGoal) {
     return (
-      <BrowserRouter>
+      <BrowserRouter basename="/calorie-tracker">
         <Routes>
           <Route path="/" element={<Onboarding setUserGoal={setUserGoal} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -28,7 +28,7 @@ export const App = () => {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/calorie-tracker">
       <div className="min-h-screen bg-gray-50/80 pb-20 md:pb-0">
         {/* Desktop Navigation */}
         <nav className="hidden md:flex sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/80">
