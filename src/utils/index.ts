@@ -1,6 +1,15 @@
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+export const OFF_API_BASE = import.meta.env.DEV ? '/off-api' : 'https://world.openfoodfacts.org';
+
+export const offFetch = (path: string) =>
+  fetch(`${OFF_API_BASE}${path}`, {
+    headers: {
+      'User-Agent': 'CalorieTracker/1.0 (https://github.com/jzarca01/calorie-tracker)',
+    },
+  });
+
 export const formatDate = (dateString: string) => {
   return format(parseISO(dateString), 'PPpp', { locale: fr });
 };

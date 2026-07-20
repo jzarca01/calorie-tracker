@@ -5,7 +5,7 @@ import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 import type { FoodItem, MealType, Meal } from '../types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { calculateNutritionalTotals } from '../utils';
+import { calculateNutritionalTotals, offFetch } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const toDateString = (d: Date) => {
@@ -39,7 +39,7 @@ const scaleFood = (food: FoodItem, grams: number): FoodItem => ({
 
 const lookupProduct = async (barcode: string): Promise<FoodItem | null> => {
   try {
-    const res = await fetch(`/off-api/api/v2/product/${encodeURIComponent(barcode)}.json`);
+    const res = await offFetch(`/api/v2/product/${encodeURIComponent(barcode)}.json`);
     if (!res.ok) return null;
     const json = await res.json();
     const product = json?.product;
@@ -50,8 +50,8 @@ const lookupProduct = async (barcode: string): Promise<FoodItem | null> => {
 
 const searchProducts = async (query: string): Promise<FoodItem[]> => {
   try {
-    const params = new URLSearchParams({ search_terms: query, search_simple: '1', action: 'process', json: '1', page_size: '10' });
-    const res = await fetch(`/off-api/cgi/search.pl?${params}`);
+    const params = new URLSearchParams({ search_terms: query, page_size: '10', fields: 'code,product_name,brands,nutriments,image_url' });
+    const res = await offFetch(`/api/v2/search?${params}`);
     if (!res.ok) return [];
     const json = await res.json();
     const products = json?.products;

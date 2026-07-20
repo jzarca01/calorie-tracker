@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import { Onboarding } from './components/Onboarding';
 import { MealLog } from './components/MealLog';
 import { Recipes } from './components/Recipes';
@@ -18,17 +18,17 @@ export const App = () => {
 
   if (!userGoal) {
     return (
-      <BrowserRouter basename="/calorie-tracker">
+      <HashRouter>
         <Routes>
           <Route path="/" element={<Onboarding setUserGoal={setUserGoal} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     );
   }
 
   return (
-    <BrowserRouter basename="/calorie-tracker">
+    <HashRouter>
       <div className="min-h-screen bg-gray-50/80 pb-20 md:pb-0">
         {/* Desktop Navigation */}
         <nav className="hidden md:flex sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/80">
@@ -97,7 +97,7 @@ export const App = () => {
           </div>
         </nav>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 

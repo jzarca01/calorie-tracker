@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useDexie } from '../hooks/useDexie';
 import type { FoodItem, Recipe } from '../types';
-import { calculateNutritionalTotals } from '../utils';
+import { calculateNutritionalTotals, offFetch } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Recipes = () => {
@@ -134,8 +134,8 @@ export const Recipes = () => {
 
   const searchProducts = async (query: string): Promise<FoodItem[]> => {
     try {
-      const params = new URLSearchParams({ search_terms: query, search_simple: '1', action: 'process', json: '1', page_size: '10' });
-      const res = await fetch(`/off-api/cgi/search.pl?${params}`);
+      const params = new URLSearchParams({ search_terms: query, page_size: '10', fields: 'code,product_name,brands,nutriments,image_url' });
+      const res = await offFetch(`/api/v2/search?${params}`);
       if (!res.ok) return [];
       const json = await res.json();
       const products = json?.products;

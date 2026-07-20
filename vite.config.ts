@@ -14,9 +14,9 @@ export default defineConfig({
         name: 'Calorie Tracker',
         short_name: 'CalorieTracker',
         description: 'Application de suivi des calories quotidiennes avec scan de codes-barres',
-        start_url: '/calorie-tracker/',
+        start_url: '/calorie-tracker/#/',
         display: 'standalone',
-        background_color: '#ffffff',
+        background_color: '#fffffb',
         theme_color: '#2563eb',
         icons: [
           {
@@ -34,17 +34,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: null,
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/world\.openfoodfacts\.org\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'openfoodfacts-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 7,
-              },
-            },
+            urlPattern: /^https:\/\/world\.openfoodfacts\.org\/.*/i,
+            handler: 'NetworkOnly',
           },
         ],
       },
