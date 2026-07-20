@@ -16,6 +16,7 @@ export const Recipes = () => {
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [apiDown, setApiDown] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
   const [savedRecipes, setSavedRecipes] = useState<FoodItem[]>([]);
@@ -132,15 +133,16 @@ export const Recipes = () => {
     await loadCustomFoods();
   };
 
-  const searchProducts = async (query: string): Promise<FoodItem[]> => {
+  const searchProducts = async (query: string): Promise<{ results: FoodItem[]; apiDown?: boolean }> => {
     try {
       const params = new URLSearchParams({ search_terms: query, page_size: '10', fields: 'code,product_name,brands,nutriments,image_url' });
       const res = await offFetch(`/api/v2/search?${params}`);
-      if (!res.ok) return [];
+      if (res.status === 503) return { results: [], apiDown: true };
+      if (!res.ok) return { results: [] };
       const json = await res.json();
       const products = json?.products;
-      if (!Array.isArray(products)) return [];
-      return products.map((p: any) => ({
+      if (!Array.isArray(products)) return { results: [] };
+      return { results: products.map((p: any) => ({
         id: p.code ?? p._id ?? query, name: p.product_name ?? p.productName ?? `Produit`,
         brand: p.brands ?? p.brand ?? '',
         calories: Math.round(p.nutriments?.['energy-kcal_100g'] ?? p.nutriments?.energyKcal ?? 0),
@@ -148,8 +150,8 @@ export const Recipes = () => {
         carbs: Math.round(((p.nutriments?.carbohydrates_100g ?? p.nutriments?.carbohydrates ?? 0)) * 10) / 10,
         fat: Math.round(((p.nutriments?.fat_100g ?? p.nutriments?.fat ?? 0)) * 10) / 10,
         servingSize: '100g', servingUnit: 'g', imageUrl: p.image_url ?? p.imageUrl ?? '',
-      }));
-    } catch { return []; }
+      })) };
+    } catch { return { results: [] }; }
   };
 
   const handleNameSearch = (value: string) => {
@@ -167,7 +169,11 @@ export const Recipes = () => {
       setIsSearching(true);
       const localSuggestions = getLocalSuggestions(query);
       let offResults: FoodItem[] = [];
-      if (query.trim().length >= 2) { offResults = await searchProducts(query.trim()); }
+      if (query.trim().length >= 2) {
+        const { results, apiDown: down } = await searchProducts(query.trim());
+        offResults = results;
+        if (down) setApiDown(true);
+      }
       const combined = [...localSuggestions, ...offResults.filter(r => !localSuggestions.some(l => l.id === r.id))];
       setSearchResults(combined); setShowSearchDropdown(combined.length > 0); setIsSearching(false);
     };
@@ -326,6 +332,15 @@ export const Recipes = () => {
                 </div>
 
                 <div className="pt-2 border-t border-gray-100">
+                  {apiDown && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 mb-3 flex items-center gap-3">
+                      <span className="text-orange-500">⚠️</span>
+                      <p className="text-xs text-orange-700 flex-1">OpenFoodFacts indisponible — utilisez vos aliments enregistrés.</p>
+                      <button onClick={() => setApiDown(false)} className="text-orange-400 hover:text-orange-600 p-1">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  )}
                   <label className="block text-sm font-medium text-gray-700 mb-2">Ingrédients</label>
                   <div className="relative">
                     <input type="text" value={searchQuery} onChange={(e) => handleNameSearch(e.target.value)}

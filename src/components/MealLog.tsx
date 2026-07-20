@@ -37,27 +37,36 @@ const scaleFood = (food: FoodItem, grams: number): FoodItem => ({
   servingSize: `${grams}g`,
 });
 
-const lookupProduct = async (barcode: string): Promise<FoodItem | null> => {
+const lookupProduct = async (barcode: string): Promise<{ product: FoodItem | null; apiDown?: boolean }> => {
   try {
-    const res = await offFetch(`/api/v2/product/${encodeURIComponent(barcode)}.json`);
-    if (!res.ok) return null;
+    const res = await offFetch(`/api/v2/product/${encodeURIComponent(barcode)}?fields=product_name,brands,nutriments,image_url`);
+    if (res.status === 503) return { product: null, apiDown: true };
+    if (!res.ok) return { product: null };
     const json = await res.json();
     const product = json?.product;
-    if (!product?.product_name) return null;
-    return mapProduct(product, barcode);
-  } catch { return null; }
+    if (!product?.product_name) return { product: null };
+    return { product: mapProduct(product, barcode) };
+  } catch { return { product: null }; }
 };
 
-const searchProducts = async (query: string): Promise<FoodItem[]> => {
+const searchProducts = async (query: string): Promise<{ results: FoodItem[]; apiDown?: boolean }> => {
   try {
-    const params = new URLSearchParams({ search_terms: query, page_size: '10', fields: 'code,product_name,brands,nutriments,image_url' });
-    const res = await offFetch(`/api/v2/search?${params}`);
-    if (!res.ok) return [];
+    const params = new URLSearchParams({
+      search_terms: query,
+      search_simple: '1',
+      action: 'process',
+      json: '1',
+      page_size: '10',
+      fields: 'code,product_name,brands,nutriments,image_url',
+    });
+    const res = await offFetch(`/cgi/search.pl?${params}`);
+    if (res.status === 503) return { results: [], apiDown: true };
+    if (!res.ok) return { results: [] };
     const json = await res.json();
     const products = json?.products;
-    if (!Array.isArray(products)) return [];
-    return products.map((p: any) => mapProduct(p, p.code ?? p._id ?? query));
-  } catch { return []; }
+    if (!Array.isArray(products)) return { results: [] };
+    return { results: products.map((p: any) => mapProduct(p, p.code ?? p._id ?? query)) };
+  } catch { return { results: [] }; }
 };
 
 const mealLabels: Record<MealType, string> = {
@@ -86,6 +95,7 @@ export const MealLog = () => {
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [apiDown, setApiDown] = useState(false);
   const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
   const [savedRecipes, setSavedRecipes] = useState<FoodItem[]>([]);
@@ -196,7 +206,8 @@ export const MealLog = () => {
           scanControlsRef.current?.stop();
           scanControlsRef.current = null;
           setIsScanning(false);
-          lookupProduct(barcode).then(product => {
+          lookupProduct(barcode).then(({ product, apiDown: down }) => {
+            if (down) setApiDown(true);
             if (product) { setQuantity(100); setFoodData(product); }
             else { setBarcodeNotFound(barcode); }
           });
@@ -238,7 +249,11 @@ export const MealLog = () => {
       setIsSearching(true);
       const localSuggestions = getLocalSuggestions(query);
       let offResults: FoodItem[] = [];
-      if (query.trim().length >= 2) { offResults = await searchProducts(query.trim()); }
+      if (query.trim().length >= 2) {
+        const { results, apiDown: down } = await searchProducts(query.trim());
+        offResults = results;
+        if (down) setApiDown(true);
+      }
       const combined = [...localSuggestions, ...offResults.filter(r => !localSuggestions.some(l => l.id === r.id))];
       setSearchResults(combined); setShowSearchDropdown(combined.length > 0); setIsSearching(false);
     };
@@ -672,6 +687,18 @@ export const MealLog = () => {
               </div>
 
               <div className="px-6 py-4 space-y-5">
+                {apiDown && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                    <span className="text-orange-500 text-lg">⚠️</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-orange-800">OpenFoodFacts indisponible</p>
+                      <p className="text-xs text-orange-600">La recherche en ligne est temporairement désactivée. Utilisez la saisie manuelle ou vos aliments enregistrés.</p>
+                    </div>
+                    <button onClick={() => setApiDown(false)} className="text-orange-400 hover:text-orange-600 p-1">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                )}
                 {isScanning && (
                   <div className="relative rounded-2xl overflow-hidden bg-black">
                     <video ref={videoRef} className="w-full max-w-md mx-auto" playsInline />

@@ -3,12 +3,37 @@ import { fr } from 'date-fns/locale';
 
 export const OFF_API_BASE = import.meta.env.DEV ? '/off-api' : 'https://world.openfoodfacts.org';
 
-export const offFetch = (path: string) =>
-  fetch(`${OFF_API_BASE}${path}`, {
-    headers: {
-      'User-Agent': 'CalorieTracker/1.0 (https://github.com/jzarca01/calorie-tracker)',
-    },
-  });
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+export const offFetch = async (path: string, retries = 3): Promise<Response> => {
+  const separator = path.includes('?') ? '&' : '?';
+  const url = `${OFF_API_BASE}${path}${separator}app_name=CalorieTracker&app_version=1.0&app_uuid=calorie-tracker`;
+
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (res.status === 503 && attempt < retries - 1) {
+        console.warn(`[OpenFoodFacts] 503 — tentative ${attempt + 1}/${retries}, retry dans ${(attempt + 1) * 1000}ms`);
+        await delay((attempt + 1) * 1000);
+        continue;
+      }
+      if (res.status === 503) {
+        console.warn('[OpenFoodFacts] API temporairement indisponible (503) après retries');
+        return new Response(JSON.stringify({ status: 0, products: [] }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+      }
+      return res;
+    } catch (err) {
+      if (attempt < retries - 1) {
+        console.warn(`[OpenFoodFacts] Erreur réseau — tentative ${attempt + 1}/${retries}:`, err);
+        await delay((attempt + 1) * 1000);
+        continue;
+      }
+      console.warn('[OpenFoodFacts] Requête échouée après retries:', err);
+      return new Response(JSON.stringify({ status: 0, products: [] }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    }
+  }
+  return new Response(JSON.stringify({ status: 0, products: [] }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+};
 
 export const formatDate = (dateString: string) => {
   return format(parseISO(dateString), 'PPpp', { locale: fr });
